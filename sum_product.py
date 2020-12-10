@@ -41,42 +41,45 @@ class Message:
 class Node:
     def __init__(self, name):
         self.name = name
-        self.neighbors = []
+        self.neighbors = set()
         self.messages = {}
-        self.in = set()  # keeps track of neighbor nodes from which messages have been received
-        self.out = set() # keeps track of neighbor nodes to which messages have been sent
+        self.incoming= set()  # keeps track of neighbor nodes from which messages have been received
+        self.outgoing = set() # keeps track of neighbor nodes to which messages have been sent
     
     def __repr__(self):
         return self.name
     
-    def add_neighbor(self, factor):
-        self.neighbors.append(factor)
+    def add_neighbor(self, node):
+        self.neighbors.add(node)
     
     def send_message(self):
-        # when node is requested to send message and list of incoming messages is empty,
-        # this means that node is leaf node and most use init message
-        if len(self.messages) == 0:
+        if len(self.neighbors) == 1: # leaf node
             message = np.ones(len(self.states)) if isinstance(self, Variable) else self.values
             for node in self.neighbors:
                 node.receive(self, Message(self, node, message))
                 print(f'Node {self.name} sends message to node {node.name}')
-            return self.neighbors # return all neighbors
+            return self.neighbors # return neighbor
         else: # not a leaf
-            in_values= [message.values for message in self.messages]
-            in_nodes = [message.origin for message in self.messages]
-            out_nodes = [node for node in self.neighbors if node not in in_nodes]
-            print('')
-            for node in out_nodes:
-                print(f'Node {self.name} sends message to node {node.name}')
-                if isinstance(self, Variable):
-                    # from variable to factor: product of all in messages:
-                    message = np.prod(in_values, axis=0)
-                else: # factor node
-                    message = self.values.T @ np.prod(in_values, axis=0)
-                node.receive(self, Message(self, node, message))
+            out_nodes = set()
+            for node in self.neighbors.difference(self.outgoing):
+                # only send if message is received from all other neighbors:
+                if len(self.incoming.union([node])) == len(self.neighbors):
+                    print(f'Node {self.name} sends message to node {node.name}')
+                    out_nodes.add(node)
+                    self.outgoing.add(node)
+                    other_nodes = self.incoming.difference([node])
+                    in_values = [self.messages[n].values for n in other_nodes]
+                    
+                    if isinstance(self, Variable):
+                        # from variable to factor: product of all in messages:
+                        message = np.prod(in_values, axis=0)
+                    else: # factor node
+                        message = self.values.T @ np.prod(in_values, axis=0)
+                    node.receive(self, Message(self, node, message))
             return out_nodes
     
     def receive(self, sender, message):
+        self.incoming.add(sender)
         self.messages[sender] = message
 
 class Variable(Node):
@@ -119,7 +122,11 @@ class FactorGraph:
                 leafs.add(node)
         return leafs
     
-    def compute_marginals(self):
+    def compute_marginal(self, variable):
+        prod = np.prod([m.values for m in variable.messages.values()], axis=0)
+        return(prod/sum(prod))
+        
+    def compute_messages(self):
         leafs = list(self.leafs())
         # 1. pick (arbitrary) root node
         #root = leafs.pop()
@@ -213,7 +220,8 @@ def test02():
 
 if __name__ == '__main__':
     g = test02()
-    print(g.factors)
-    g.compute_marginals()
+    print(g.vars)
+    g.compute_messages()
     for node in g.vars + g.factors:
         print(node, node.messages)
+    print(g.compute_marginal(g.vars[3]))
