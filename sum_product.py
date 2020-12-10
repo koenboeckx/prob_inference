@@ -42,8 +42,9 @@ class Node:
     def __init__(self, name):
         self.name = name
         self.neighbors = []
-        self.messages = []
-        self.message_store = []
+        self.messages = {}
+        self.in = set()  # keeps track of neighbor nodes from which messages have been received
+        self.out = set() # keeps track of neighbor nodes to which messages have been sent
     
     def __repr__(self):
         return self.name
@@ -57,7 +58,7 @@ class Node:
         if len(self.messages) == 0:
             message = np.ones(len(self.states)) if isinstance(self, Variable) else self.values
             for node in self.neighbors:
-                node.messages.append(Message(self, node, message))
+                node.receive(self, Message(self, node, message))
                 print(f'Node {self.name} sends message to node {node.name}')
             return self.neighbors # return all neighbors
         else: # not a leaf
@@ -72,8 +73,11 @@ class Node:
                     message = np.prod(in_values, axis=0)
                 else: # factor node
                     message = self.values.T @ np.prod(in_values, axis=0)
-                node.messages.append(Message(self, node, message))
+                node.receive(self, Message(self, node, message))
             return out_nodes
+    
+    def receive(self, sender, message):
+        self.messages[sender] = message
 
 class Variable(Node):
     def __init__(self, name, n_states):
@@ -87,7 +91,6 @@ class Factor(Node):
         assert isinstance(array, np.ndarray), f'´array has to be a numpy ndarray, not {type(array)}'
         self.values = array
         self.shape  = self.values.shape
-
 
 class FactorGraph:
     def __init__(self):
