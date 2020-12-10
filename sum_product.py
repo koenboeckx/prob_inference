@@ -57,14 +57,12 @@ class Node:
             message = np.ones(len(self.states)) if isinstance(self, Variable) else self.values
             for node in self.neighbors:
                 node.receive(self, Message(self, node, message))
-                print(f'Node {self.name} sends message to node {node.name}')
             return self.neighbors # return neighbor
         else: # not a leaf
             out_nodes = set()
             for node in self.neighbors.difference(self.outgoing):
                 # only send if message is received from all other neighbors:
                 if len(self.incoming.union([node])) == len(self.neighbors):
-                    print(f'Node {self.name} sends message to node {node.name}')
                     out_nodes.add(node)
                     self.outgoing.add(node)
                     other_nodes = self.incoming.difference([node])
@@ -134,21 +132,16 @@ class FactorGraph:
         leafs.remove(root)
         # 2. Propagate messages from leaves to root
         fringe = leafs[:]
-        print(f'fringe = {fringe}')
         while len(fringe) > 0:
             node = fringe.pop(0)
             next_nodes = node.send_message()
             fringe = fringe + [node for node in next_nodes if node not in fringe]
-            print(f'fringe = {fringe}')
-        print('-----------------------------------------------------')
         # 3. Propagate messages from root to leaves
         fringe = [root]
-        print(f'fringe = {fringe}')
         while len(fringe) > 0:
             node = fringe.pop(0)
             next_nodes = node.send_message()
             fringe = fringe + [node for node in next_nodes if node not in fringe]
-            print(f'fringe = {fringe}')
 
 def test01():
     g = FactorGraph()
@@ -224,4 +217,5 @@ if __name__ == '__main__':
     g.compute_messages()
     for node in g.vars + g.factors:
         print(node, node.messages)
-    print(g.compute_marginal(g.vars[3]))
+    for var in g.vars:
+        print(f'{var}: {g.compute_marginal(var)}')
