@@ -86,11 +86,27 @@ class Node:
                         # from variable to factor: product of all in messages:
                         message = np.prod(in_values, axis=0)
                     else: # factor node
-                        axis = self.axes_vars[node]
-                        if axis == 0:
-                            message = self.values @ np.prod(in_values, axis=0)
-                        else:
-                            message = self.values.T @ np.prod(in_values, axis=0)
+                        if len(self.axes_vars) == 1: # factor with one var
+                            message = self.values @ in_values
+                        elif len(self.axes_vars) == 2: # factor with two vars
+                            axis = self.axes_vars[node]
+                            if axis == 0:
+                                message = self.values @ in_values[0]
+                            else:
+                                message = self.values.T @ in_values[0]
+                        elif len(self.axes_vars) == 3: # factor with three vars
+                            axis = self.axes_vars[node]
+                            idxs = list(range(len(self.axes_vars) ))
+                            idxs.insert(0, idxs.pop(axis))
+                            product = [1]
+                            #for val in in_values:
+                            #    product = np.tensordot(product, val, axes=0)
+                            #message = np.transpose(self.values, axes=idxs) @ product
+                            message = np.transpose(self.values, axes=idxs)
+                            for idx, val in zip(idxs[1:], in_values):
+                                message = np.dot(message, val)
+                            print()
+
                     node.receive(self, Message(self, node, message))
             return out_nodes
     
@@ -99,7 +115,6 @@ class Node:
         self.messages[sender] = message
 
 class Variable(Node):
-    # TODO: add evidential state
     def __init__(self, name, n_states, value=None):
         """`value` is the observed value of the Variable; 
             if not observerd: `value=None`"""
@@ -215,7 +230,7 @@ def test01():
 
 
 def test02():
-    # defeinition of the (so far empty) factor graph
+    # definition of the (so far empty) factor graph
     g = FactorGraph()
 
     # declaration of the variables
@@ -260,14 +275,50 @@ def test02():
     g.append(f4, C)
     return g
 
+def test03():
+    g = FactorGraph()
+
+    # declaration of the variables
+    # arguments: name, # of possible values, value = ... if observed
+    A = Variable('A', 2)
+    B = Variable('B', 2)
+    C = Variable('C', 2)
+
+    fA = Factor('fA', np.array(
+        [1, 1]
+    ))
+
+    g.add(fA)
+    g.append(fA, A)
+
+    fB = Factor('fB', np.array(
+        [1, 1]
+    ))
+
+    g.add(fB)
+    g.append(fB, B)
+
+    fABC = Factor('fABC', np.array([
+        [[0.1, 0.5],
+         [0.5, 0.9]],
+
+        [[0.9, 0.5],
+         [0.5, 0.1]],
+    ]))
+
+    g.add(fABC)
+    g.append(fABC, A)
+    g.append(fABC, B)
+    g.append(fABC, C)
+
+    return g
+
+
 if __name__ == '__main__':
-    g = test02()
+    g = test03()
     g.compute_messages()
     for node in g.vars + g.factors:
         print(f'{node}: {node.messages}')
     print('')
     for var in g.vars:
         print(f'P({var}) = {g.compute_marginal(var)}')
-
-    for factor in g.factors:
-        print(f'{factor.name}: {factor.values}')

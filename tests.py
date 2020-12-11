@@ -179,5 +179,45 @@ class Testing(unittest.TestCase):
         self.assertEqual(g.compute_marginal(C)[0], 0.5)
         self.assertAlmostEqual(g.compute_marginal(D)[0], 0.90909091)
 
+    def test_three_factor_1(self):
+        g = FactorGraph()
+
+        # declaration of the variables
+        # arguments: name, # of possible values, value = ... if observed
+        A = Variable('A', 2)
+        B = Variable('B', 2)
+        C = Variable('C', 2)
+
+        fA = Factor('fA', np.array(
+            [1, 1]
+        ))
+
+        g.add(fA)
+        g.append(fA, A)
+
+        fB = Factor('fB', np.array(
+            [1, 1]
+        ))
+
+        g.add(fB)
+        g.append(fB, B)
+
+        fABC = Factor('fABC', np.array([
+            [[0.1, 0.5],
+            [0.5, 0.9]],
+
+            [[0.9, 0.5],
+            [0.5, 0.1]],
+        ]))
+
+        g.add(fABC)
+        g.append(fABC, A)
+        g.append(fABC, B)
+        g.append(fABC, C)
+
+        g.compute_messages()
+        self.assertEqual(g.compute_marginal(C)[0], 0.5)
+
+
 if __name__ == '__main__':
     unittest.main()
