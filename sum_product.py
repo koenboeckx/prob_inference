@@ -221,7 +221,7 @@ def test02():
     # declaration of the variables
     # arguments: name, # of possible values, value = ... if observed
     A = Variable('A', 2)
-    B = Variable('B', 2)
+    B = Variable('B', 2, value=0)
     C = Variable('C', 2)
     D = Variable('D', 2)
 
@@ -261,7 +261,7 @@ def test02():
     return g
 
 if __name__ == '__main__':
-    g = test01()
+    g = test02()
     g.compute_messages()
     for node in g.vars + g.factors:
         print(f'{node}: {node.messages}')
