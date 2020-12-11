@@ -27,6 +27,9 @@
 # g.nodes['x1'].marginal() # -> array([0.5, 0.5])
 # ```
 
+# TODO: in its current form, the method Node.send_message() can not accomodate
+#       factors with three variables, what must be addressed
+
 import numpy as np
 
 def update_with_evidence(A, index, axis):
@@ -83,7 +86,11 @@ class Node:
                         # from variable to factor: product of all in messages:
                         message = np.prod(in_values, axis=0)
                     else: # factor node
-                        message = self.values.T @ np.prod(in_values, axis=0)
+                        axis = self.axes_vars[node]
+                        if axis == 0:
+                            message = self.values @ np.prod(in_values, axis=0)
+                        else:
+                            message = self.values.T @ np.prod(in_values, axis=0)
                     node.receive(self, Message(self, node, message))
             return out_nodes
     
@@ -112,6 +119,14 @@ class Factor(Node):
         self.values = array
         self.shape  = self.values.shape
         self.connected_vars = 0
+        self.axes_vars = {} # keeps track of which variable is associated with 
+                            # which axis (dimension) of the `self.values` array
+        self.next_axis = 0
+    
+    def add_neighbor(self, node):
+        self.neighbors.add(node)
+        self.axes_vars[node] = self.next_axis
+        self.next_axis += 1
 
 class FactorGraph:
     def __init__(self):
@@ -161,9 +176,7 @@ class FactorGraph:
             """
         leafs = list(self.leafs())
         # 1. pick (arbitrary) root node
-        #root = leafs.pop()
-        root = self.factors[-1] # force uses of  as root - remove later
-        leafs.remove(root)
+        root = leafs.pop()
         # 2. Propagate messages from leaves to root
         fringe = leafs[:]
         while len(fringe) > 0:
@@ -202,10 +215,13 @@ def test01():
 
 
 def test02():
+    # defeinition of the (so far empty) factor graph
     g = FactorGraph()
 
+    # declaration of the variables
+    # arguments: name, # of possible values, value = ... if observed
     A = Variable('A', 2)
-    B = Variable('B', 2, value=0) # addition of evidence
+    B = Variable('B', 2, value=0)
     C = Variable('C', 2)
     D = Variable('D', 2)
 
@@ -252,3 +268,6 @@ if __name__ == '__main__':
     print('')
     for var in g.vars:
         print(f'P({var}) = {g.compute_marginal(var)}')
+
+    for factor in g.factors:
+        print(f'{factor.name}: {factor.values}')
