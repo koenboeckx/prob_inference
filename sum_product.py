@@ -2,6 +2,7 @@
 # coding: utf-8
 
 # [github link](https://github.com/ilyakava/sumproduct)
+# see also: https://ermongroup.github.io/cs228-notes/
 
 # ## Interface
 # ```python
@@ -27,6 +28,16 @@
 # ```
 
 import numpy as np
+
+def update_with_evidence(A, index, axis):
+    """Helper function - sets all values of A to zero,
+        except for index along axis"""
+    cut_out = np.take(A, index, axis=axis)
+    B = np.zeros_like(A)
+    slc = [slice(None)] * len(B.shape)
+    slc[axis] = slice(index, index+1)
+    B[tuple(slc)] = cut_out.reshape(B[tuple(slc)].shape)
+    return B
 
 class Message:
     def __init__(self, origin, dest, values):
@@ -81,9 +92,17 @@ class Node:
         self.messages[sender] = message
 
 class Variable(Node):
-    def __init__(self, name, n_states):
+    # TODO: add evidential state
+    def __init__(self, name, n_states, value=None):
+        """`value` is the observed value of the Variable; 
+            if not observerd: `value=None`"""
         super().__init__(name)
-        self.states = list(range(n_states))    
+        self.states = list(range(n_states))
+        if value is not None:
+            assert value in self.states, f'Value {value} is not a valid value for variable {name}'
+            self.value = value
+        else:
+            self.value = None
 
 
 class Factor(Node):
@@ -92,6 +111,7 @@ class Factor(Node):
         assert isinstance(array, np.ndarray), f'´array has to be a numpy ndarray, not {type(array)}'
         self.values = array
         self.shape  = self.values.shape
+        self.connected_vars = 0
 
 class FactorGraph:
     def __init__(self):
@@ -107,8 +127,17 @@ class FactorGraph:
         """Add a variable to factor"""
         assert factor in self.factors, f'Factor {factor.name} not yet defined'
         # TODO: check for correct size
+        factor.connected_vars += 1
         if variable not in self.vars:
             self.vars.append(variable)
+        # check for evidence - adapt factor accordingly (Barber, p.89)
+        if variable.value is not None: # variable is set (observed) to value
+            # set all elements of factor potential that don't 
+            # correspond to variable value to zero
+            axis = factor.connected_vars - 1
+            idx = variable.states.index(variable.value)
+            factor.values = update_with_evidence(factor.values, idx, axis)
+
         factor.add_neighbor(variable)
         variable.add_neighbor(factor)
 
@@ -125,6 +154,11 @@ class FactorGraph:
         return(prod/sum(prod))
         
     def compute_messages(self):
+        """In a tree exact inference of all the marginals can be done by two passes of the
+            sum-product algorithm
+            TODO: use logarithm: multiplications can result in very small values 
+                                → use logarithm and summation instead (Barber, p.90)
+            """
         leafs = list(self.leafs())
         # 1. pick (arbitrary) root node
         #root = leafs.pop()
@@ -168,11 +202,10 @@ def test01():
 
 
 def test02():
-    ## second test
     g = FactorGraph()
 
     A = Variable('A', 2)
-    B = Variable('B', 2)
+    B = Variable('B', 2, value=0) # addition of evidence
     C = Variable('C', 2)
     D = Variable('D', 2)
 
@@ -213,9 +246,9 @@ def test02():
 
 if __name__ == '__main__':
     g = test02()
-    print(g.vars)
     g.compute_messages()
     for node in g.vars + g.factors:
-        print(node, node.messages)
+        print(f'{node}: {node.messages}')
+    print('')
     for var in g.vars:
-        print(f'{var}: {g.compute_marginal(var)}')
+        print(f'P({var}) = {g.compute_marginal(var)}')
