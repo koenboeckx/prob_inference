@@ -90,7 +90,8 @@ class Node:
                         idxs = [self.axes_vars[n] for n in other_nodes]
                         idxs.insert(0, self.axes_vars[node])
                         message = np.transpose(self.values, axes=idxs)
-                        for val in in_values:
+                        #message = self.values.copy()
+                        for val in reversed(in_values): # reversed because multiplying goes from outside in
                             message = np.dot(message, val)
 
                     node.receive(self, Message(self, node, message))
@@ -180,7 +181,6 @@ class FactorGraph:
         leafs = list(self.leafs())
         # 1. pick (arbitrary) root node
         root = leafs.pop()
-        print(f'root = {root}')
         # 2. Propagate messages from leaves to root
         fringe = leafs[:]
         while len(fringe) > 0:
@@ -272,28 +272,26 @@ def test03():
     C = Variable('C', 2)
 
     fA = Factor('fA', np.array(
-        #[0.3, 0.7]
-        [1.0, 1.0]
+        [0.3, 0.7]
     ))
 
     g.add(fA)
     g.append(fA, A)
 
     fB = Factor('fB', np.array(
-        #[0.4, 0.6]
-        [1.0, 1.0]
+        [0.4, 0.6]
     ))
 
     g.add(fB)
     g.append(fB, B)
 
-    fABC = Factor('fABC', np.array([
-        [[0.1, 0.4],
-         [0.5, 0.9]],
+    fABC = Factor('fABC', np.array(
+        [[[0.1, 0.9],
+          [0.4, 0.6]],
 
-        [[0.9, 0.6],
-         [0.5, 0.1]],
-    ]))
+         [[0.5, 0.5],
+          [0.9, 0.1]]])
+    )
 
     g.add(fABC)
     g.append(fABC, A)
@@ -301,7 +299,6 @@ def test03():
     g.append(fABC, C)
 
     return g
-
 
 if __name__ == '__main__':
     g = test03()

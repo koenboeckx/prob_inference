@@ -189,25 +189,25 @@ class Testing(unittest.TestCase):
         C = Variable('C', 2)
 
         fA = Factor('fA', np.array(
-            [1, 1]
+            [0.3, 0.7]
         ))
 
         g.add(fA)
         g.append(fA, A)
 
         fB = Factor('fB', np.array(
-            [1, 1]
+            [0.4, 0.6]
         ))
 
         g.add(fB)
         g.append(fB, B)
 
-        fABC = Factor('fABC', np.array([
-            [[0.1, 0.5],
-            [0.5, 0.9]],
+        fABC = Factor('fABC', np.array(
+            [[[0.1, 0.9],
+            [0.4, 0.6]],
 
-            [[0.9, 0.5],
-            [0.5, 0.1]],
+            [[0.5, 0.5],
+            [0.9, 0.1]]
         ]))
 
         g.add(fABC)
@@ -216,7 +216,7 @@ class Testing(unittest.TestCase):
         g.append(fABC, C)
 
         g.compute_messages()
-        self.assertEqual(g.compute_marginal(C)[0], 0.5)
+        self.assertEqual(g.compute_marginal(C)[0],0.602)
 
 
 if __name__ == '__main__':
