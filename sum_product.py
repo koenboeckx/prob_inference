@@ -79,33 +79,19 @@ class Node:
                 if len(self.incoming.union([node])) == len(self.neighbors):
                     out_nodes.add(node)
                     self.outgoing.add(node)
-                    other_nodes = self.incoming.difference([node])
+                    other_nodes = list(self.incoming.difference([node]))
                     in_values = [self.messages[n].values for n in other_nodes]
-                    
+
                     if isinstance(self, Variable):
                         # from variable to factor: product of all in messages:
                         message = np.prod(in_values, axis=0)
-                    else: # factor node
-                        if len(self.axes_vars) == 1: # factor with one var
-                            message = self.values @ in_values
-                        elif len(self.axes_vars) == 2: # factor with two vars
-                            axis = self.axes_vars[node]
-                            if axis == 0:
-                                message = self.values @ in_values[0]
-                            else:
-                                message = self.values.T @ in_values[0]
-                        elif len(self.axes_vars) == 3: # factor with three vars
-                            axis = self.axes_vars[node]
-                            idxs = list(range(len(self.axes_vars) ))
-                            idxs.insert(0, idxs.pop(axis))
-                            product = [1]
-                            #for val in in_values:
-                            #    product = np.tensordot(product, val, axes=0)
-                            #message = np.transpose(self.values, axes=idxs) @ product
-                            message = np.transpose(self.values, axes=idxs)
-                            for idx, val in zip(idxs[1:], in_values):
-                                message = np.dot(message, val)
-                            print()
+                    elif isinstance(self, Factor):         
+                        # from factor to variable: sum product of all in messages: 
+                        idxs = [self.axes_vars[n] for n in other_nodes]
+                        idxs.insert(0, self.axes_vars[node])
+                        message = np.transpose(self.values, axes=idxs)
+                        for val in in_values:
+                            message = np.dot(message, val)
 
                     node.receive(self, Message(self, node, message))
             return out_nodes
@@ -156,7 +142,9 @@ class FactorGraph:
     def append(self, factor, variable):
         """Add a variable to factor"""
         assert factor in self.factors, f'Factor {factor.name} not yet defined'
-        # TODO: check for correct size
+        # Check for correct size
+        assert factor.values.shape[factor.connected_vars] == len(variable.states), \
+             f'Variable {variable} has incorrect size (size = {len(variable.states)}, required {factor.values.shape[factor.connected_vars] })'
         factor.connected_vars += 1
         if variable not in self.vars:
             self.vars.append(variable)
@@ -192,6 +180,7 @@ class FactorGraph:
         leafs = list(self.leafs())
         # 1. pick (arbitrary) root node
         root = leafs.pop()
+        print(f'root = {root}')
         # 2. Propagate messages from leaves to root
         fringe = leafs[:]
         while len(fringe) > 0:
@@ -227,8 +216,6 @@ def test01():
     #g.nodes['x1'].marginal() # -> array([0.5, 0.5])
     return g
 
-
-
 def test02():
     # definition of the (so far empty) factor graph
     g = FactorGraph()
@@ -236,7 +223,7 @@ def test02():
     # declaration of the variables
     # arguments: name, # of possible values, value = ... if observed
     A = Variable('A', 2)
-    B = Variable('B', 2, value=0)
+    B = Variable('B', 2)
     C = Variable('C', 2)
     D = Variable('D', 2)
 
@@ -285,24 +272,26 @@ def test03():
     C = Variable('C', 2)
 
     fA = Factor('fA', np.array(
-        [1, 1]
+        #[0.3, 0.7]
+        [1.0, 1.0]
     ))
 
     g.add(fA)
     g.append(fA, A)
 
     fB = Factor('fB', np.array(
-        [1, 1]
+        #[0.4, 0.6]
+        [1.0, 1.0]
     ))
 
     g.add(fB)
     g.append(fB, B)
 
     fABC = Factor('fABC', np.array([
-        [[0.1, 0.5],
+        [[0.1, 0.4],
          [0.5, 0.9]],
 
-        [[0.9, 0.5],
+        [[0.9, 0.6],
          [0.5, 0.1]],
     ]))
 
