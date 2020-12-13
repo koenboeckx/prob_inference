@@ -14,9 +14,6 @@ class BNVariable:
     def add_propability_table(self, table):
         self.table = table
 
-class BeliefNetwork:
-    def __init__(self):
-        pass
 
 def make_factor_graph(beliefnet):
     fg = FactorGraph()
@@ -29,17 +26,20 @@ def make_factor_graph(beliefnet):
         fg.append(factor, vars[node.name])
         
     
-    others = [node for node in beliefnet if node not in parents]
-    while len(others) > 0:
-        for node in others:
-            if all([parent in parents for parent in node.parents]):
-                others.remove(node)
-                vars[node.name] = Variable(node.name, len(node.states))
-                factor = Factor('f'+node.name, node.table)
-                fg.add(factor)
-                for parent in node.parents:
-                    fg.append(factor, vars[parent.name])
-                fg.append(factor, vars[node.name])
+    to_do = [node for node in beliefnet if node not in parents]
+    while len(to_do) > 0:
+        next_nodes = [n for n  in to_do if all([p in parents for p in n.parents])] # only use nodes who have all parents already done
+        for node in next_nodes:
+            to_do.remove(node)
+            #if not all([parent in parents for parent in node.parents]): # not all parents of node are already in factorgraph
+            #    continue
+            vars[node.name] = Variable(node.name, len(node.states))
+            factor = Factor('f'+node.name, node.table)
+            fg.add(factor)
+            for parent in node.parents:
+                fg.append(factor, vars[parent.name])
+            fg.append(factor, vars[node.name])
+            parents.append(node)
 
     return fg
 

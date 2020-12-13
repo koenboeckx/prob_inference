@@ -194,6 +194,8 @@ class FactorGraph:
             next_nodes = node.send_message()
             fringe = fringe + [node for node in next_nodes if node not in fringe]
 
+# ------------------- Tests ---------------------------------------------------------
+
 def test01():
     g = FactorGraph()
 

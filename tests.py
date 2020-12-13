@@ -222,7 +222,7 @@ class Testing(unittest.TestCase):
     
     def test_gridworld(self):
         gw = GridWorld()
-        self.assertEqual(gw.step(11, 2), (15, 10, True))
+        self.assertEqual(gw.step(11, 2), (15, 0, True))
         self.assertEqual(gw.step(12, 2), (12, -1.0, False))
 
     def test_transform_belief_net(self):
