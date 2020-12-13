@@ -65,4 +65,4 @@ class GridWorld:
 
 if __name__ == '__main__':
     gw = GridWorld()
-    print(gw.step(11, 2))
+    print(gw.step(12, 2))

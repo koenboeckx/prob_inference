@@ -2,6 +2,8 @@ import unittest
 
 import numpy as np
 from sum_product import Variable, Factor, FactorGraph
+from belief_networks import BNVariable, make_factor_graph
+from gridworld import GridWorld
 
 
 class Testing(unittest.TestCase):
@@ -217,7 +219,29 @@ class Testing(unittest.TestCase):
 
         g.compute_messages()
         self.assertEqual(g.compute_marginal(C)[0],0.602)
+    
+    def test_gridworld(self):
+        gw = GridWorld()
+        self.assertEqual(gw.step(11, 2), (15, 10, True))
+        self.assertEqual(gw.step(12, 2), (12, -1.0, False))
 
+    def test_transform_belief_net(self):
+        A = BNVariable('A', 2)
+        A.add_propability_table(np.array([0.3, 0.7]))
+        B = BNVariable('B', 2)
+        B.add_propability_table(np.array([0.4, 0.6]))
+        C = BNVariable('C', 2, parents=[A,B])
+        C.add_propability_table(np.array(
+            [[[0.1, 0.9],
+            [0.4, 0.6]],
+
+            [[0.5, 0.5],
+            [0.9, 0.1]]])
+        )
+        factor_graph = make_factor_graph([A, B, C])
+        factor_graph.compute_messages()
+        for var, result in zip(factor_graph.vars, [0.3, 0.4, 0.602]):
+            self.assertEqual(factor_graph.compute_marginal(var)[0], result)
 
 if __name__ == '__main__':
     unittest.main()
