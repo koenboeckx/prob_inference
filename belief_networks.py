@@ -14,8 +14,29 @@ class BNVariable:
     def add_propability_table(self, table):
         self.table = table
 
+def order_beliefnet(beliefnet):
+    """
+    A belief net is a Directed Acyclic Graph that has an implicit
+    ordening, where parents come before children.
+    `order_beliefnet` returns a dict with as keys a level counter,
+    and as values list of nodes belonging to that level of the DAG.
+    """
+    order = {}
+    to_do = beliefnet[:]
+    done  = []
+    next_nodes = [n for n in to_do if n.parents is None]
+    counter = 0
+    while to_do:
+        order[counter] = next_nodes[:]
+        for node in next_nodes:
+            to_do.remove(node)
+            done.append(node)
+        next_nodes = [n for n  in to_do if all([p in done for p in n.parents])]
+        counter += 1
+    return order
 
 def make_factor_graph(beliefnet):
+    # TODO: redo this with `order_beliefnet`
     fg = FactorGraph()
     vars = {}
     parents = [node for node in beliefnet if node.parents is None]
@@ -43,6 +64,29 @@ def make_factor_graph(beliefnet):
 
     return fg
 
+def draw_beliefnet(beliefnet):
+    """draws the factorgraph and returns 
+    a networkx digraph object representing
+    the graph"""
+    import networkx as nx
+    import matplotlib.pyplot as plt
+
+    G = nx.DiGraph()
+    # add nodes
+    for node in beliefnet:
+        G.add_node(node.name)
+    
+    # add edges
+    for node in beliefnet:
+        if node.parents is not None:
+            for parent in node.parents:
+                G.add_edge(parent.name, node.name)
+    
+    nx.draw(G, with_labels=True, font_weight='bold', pos=nx.planar_layout(G))
+    plt.show()
+
+    return G
+
 if __name__ == '__main__':
     A = BNVariable('A', 2)
     A.add_propability_table(np.array([0.3, 0.7]))
@@ -63,3 +107,4 @@ if __name__ == '__main__':
     print('')
     for var in factor_graph.vars:
         print(f'P({var}) = {factor_graph.compute_marginal(var)}')
+    draw_beliefnet([A, B, C])

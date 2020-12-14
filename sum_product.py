@@ -170,17 +170,21 @@ class FactorGraph:
     
     def compute_marginal(self, variable):
         prod = np.prod([m.values for m in variable.messages.values()], axis=0)
-        return(prod/sum(prod))
+        return prod/sum(prod)
         
-    def compute_messages(self):
+    def compute_messages(self, root=None):
         """In a tree exact inference of all the marginals can be done by two passes of the
             sum-product algorithm
             TODO: use logarithm: multiplications can result in very small values 
                                 → use logarithm and summation instead (Barber, p.90)
             """
         leafs = list(self.leafs())
-        # 1. pick (arbitrary) root node
-        root = leafs.pop()
+        # 1. pick (arbitrary?) root node
+        if root is not None:
+            assert root in leafs, f'Proposed root node {root} not in leafs: {leafs}'
+            leafs.remove(root)
+        else:
+            root = leafs.pop()
         # 2. Propagate messages from leaves to root
         fringe = leafs[:]
         while len(fringe) > 0:
@@ -193,6 +197,34 @@ class FactorGraph:
             node = fringe.pop(0)
             next_nodes = node.send_message()
             fringe = fringe + [node for node in next_nodes if node not in fringe]
+    
+    def draw(self):
+        """draws the factorgraph and returns 
+        a networkx digraph object representing
+        the graph"""
+        import networkx as nx
+        import matplotlib.pyplot as plt
+
+        node_color = []
+        G = nx.Graph()
+        # add nodes
+        for node in self.vars:
+            G.add_node(node.name)
+            node_color.append("green")
+        for node in self.factors:
+            G.add_node(node.name)
+            node_color.append("red")
+        
+        # add edges
+        for node in self.vars + self.factors:
+            for node2 in node.neighbors:
+                G.add_edge(node.name, node2.name)
+        
+        nx.draw(G, with_labels=True, font_weight='bold',
+                pos=nx.kamada_kawai_layout(G), node_color=node_color)
+        plt.show()
+
+        return G
 
 # ------------------- Tests ---------------------------------------------------------
 
@@ -300,13 +332,16 @@ def test03():
     g.append(fABC, B)
     g.append(fABC, C)
 
+    g.compute_messages(root=C)
+
     return g
 
 if __name__ == '__main__':
     g = test03()
-    g.compute_messages()
     for node in g.vars + g.factors:
         print(f'{node}: {node.messages}')
     print('')
     for var in g.vars:
         print(f'P({var}) = {g.compute_marginal(var)}')
+    g.draw()
+    

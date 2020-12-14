@@ -109,10 +109,10 @@ if __name__ == '__main__':
     print('---------------------------------------------------')
     print(beliefnet[0].table[0,:,:].shape)
     print(beliefnet[0].table[0,:,:])
-    from belief_networks import make_factor_graph
+    from belief_networks import make_factor_graph, draw_beliefnet
     factor_graph = make_factor_graph(beliefnet)
     factor_graph.compute_messages()
-    
+    factor_graph.draw()
     for var in factor_graph.vars:
         print(f'P({var}): {factor_graph.compute_marginal(var)}')
     
