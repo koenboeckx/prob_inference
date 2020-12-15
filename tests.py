@@ -6,7 +6,7 @@ from belief_networks import BNVariable, make_factor_graph
 from gridworld import GridWorld
 
 
-class Testing(unittest.TestCase):
+class TestMessagePassing(unittest.TestCase):
     def test_simple_graph(self):
         g = FactorGraph()
 
@@ -242,6 +242,9 @@ class Testing(unittest.TestCase):
         factor_graph.compute_messages()
         for var, result in zip(factor_graph.vars, [0.3, 0.4, 0.602]):
             self.assertEqual(factor_graph.compute_marginal(var)[0], result)
+
+class TestHMM(unittest.TestCase):
+    pass
 
 if __name__ == '__main__':
     unittest.main()

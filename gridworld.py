@@ -32,7 +32,7 @@ class GridWorld:
         self.P, self.R = dict(), dict()
         self.n_states  = size**2
         self.n_actions = n_actions
-        self.terminal_states = [0, 15]
+        self.terminal_states = [0, size**2-1]
         for s in range(self.n_states):
             for a in range(n_actions):
                 self.P[(s, a)] = [0,]*self.n_states
@@ -73,10 +73,10 @@ def make_beliefnet(gridworld, n_steps=10):
     """
     # create the (fixed) propability tables for the three kind of variables
     # 1. state var -> transition table
-    tansition_table = np.zeros((gridworld.n_states, gridworld.n_actions, gridworld.n_states))
+    transition_table = np.zeros((gridworld.n_states, gridworld.n_actions, gridworld.n_states))
     for s in range(gridworld.n_states):
         for a in range(gridworld.n_actions):
-            tansition_table[s, a, :] = gridworld.P[(s, a)]
+            transition_table[s, a, :] = gridworld.P[(s, a)]
     # 2. action var -> uniform prior
     action_table = np.ones(gridworld.n_actions)/gridworld.n_actions
     # 3. optimality var -> exponential over rewards (see ref. 1)
@@ -90,7 +90,15 @@ def make_beliefnet(gridworld, n_steps=10):
     for t in range(n_steps):
         state = BNVariable('s' + str(t), gridworld.n_states,
                 parents=None if t == 0 else [states[t-1], actions[t-1]])
-        state.add_propability_table(tansition_table)
+        if t == 0: # for state s0, use prior distribution
+            # all states, besides (impossible) terminal states, are initially equally likely
+            prior_table = np.ones(gridworld.n_states)
+            for s in gridworld.terminal_states:
+                prior_table[s] = 0.0
+            prior_table /= gridworld.n_states - len(gridworld.terminal_states)
+            state.add_propability_table(prior_table)
+        else: # for later state, use CPT
+            state.add_propability_table(transition_table)
         action = BNVariable('a' + str(t), gridworld.n_actions)
         action.add_propability_table(action_table)
         optimal = BNVariable('o' + str(t), 2, parents=[state, action])
@@ -102,17 +110,14 @@ def make_beliefnet(gridworld, n_steps=10):
 
 
 if __name__ == '__main__':
+    from belief_networks import make_factor_graph
+
     gw = GridWorld()
     beliefnet = make_beliefnet(gw, n_steps=3)
-    for var in beliefnet:
-        print(np.sum(var.table, axis=-1))
-    print('---------------------------------------------------')
-    print(beliefnet[0].table[0,:,:].shape)
-    print(beliefnet[0].table[0,:,:])
-    from belief_networks import make_factor_graph, draw_beliefnet
-    factor_graph = make_factor_graph(beliefnet)
-    factor_graph.compute_messages()
-    factor_graph.draw()
-    for var in factor_graph.vars:
-        print(f'P({var}): {factor_graph.compute_marginal(var)}')
     
+    g = make_factor_graph(beliefnet)
+    g.compute_messages(root=g.vars[-1])
+    
+    for node in g.vars + g.factors:
+        print(f'{node}: {node.messages}')
+    print('...')
