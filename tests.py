@@ -4,6 +4,8 @@ import numpy as np
 from sum_product import Variable, Factor, FactorGraph
 from belief_networks import BNVariable, make_factor_graph
 from gridworld import GridWorld
+from hmm import HMM
+
 
 
 class TestMessagePassing(unittest.TestCase):
@@ -244,7 +246,36 @@ class TestMessagePassing(unittest.TestCase):
             self.assertEqual(factor_graph.compute_marginal(var)[0], result)
 
 class TestHMM(unittest.TestCase):
-    pass
+    def test_simple_hmm(self):
+        "https://people.csail.mit.edu/rameshvs/content/hmms.pdf"
+        hidden_values = ['Area 1', 'Area 2', 'Area 3']
+
+        prior = {'Area 1': 1/3, 'Area 2': 1/3, 'Area 3': 1/3}
+
+        transition_table = {
+            'Area 1': {'Area 1': 0.25, 'Area 2': 0.75, 'Area 3': 0.},
+            'Area 2': {'Area 1': 0.  , 'Area 2': 0.25, 'Area 3': 0.75},
+            'Area 3': {'Area 1': 0.  , 'Area 2': 0.  , 'Area 3': 1.},
+        }
+
+        obs_values = ['hot', 'cold']
+        obs_table = {
+            'Area 1': {'hot': 1.0, 'cold': 0.0},
+            'Area 2': {'hot': 0.0, 'cold': 1.0},
+            'Area 3': {'hot': 1.0, 'cold': 0.0},
+        }
+
+        hmm = HMM(hidden_values, prior, transition_table, obs_values, obs_table,
+                n_steps=3)
+        hmm.set_observed_values(['hot', 'cold', 'hot'])
+
+        hmm.compute_alpha()
+        result = hmm.filtered_posterior(index=2)
+        for r, v in zip(result.values(), [0.0, 0.0, 1.0]):
+            self.assertEqual(r, v)
+        hmm.compute_beta()
+        for r, v in zip(hmm.smoothed_posterior(index=2).values(), [0.0, 0.0, 1.0]):
+            self.assertEqual(r, v)
 
 if __name__ == '__main__':
     unittest.main()
