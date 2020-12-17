@@ -130,6 +130,10 @@ if __name__ == '__main__':
         print(f'{state}: {n}')
     #for key in rewards:
     #    print(f'{key}: reward = {rewards[key]}')
-
-
+    print('..')
+    #transition_table[(13, 3)][13] = 1.0
+    #transition_table[(13, 4)][13] = 1.0
+    #with open(filename, 'wb') as f:
+    #    pickle.dump({'transition': transition_table,'rewards': rewards, 'counts': counts}, f)
+    
     #test_env()
