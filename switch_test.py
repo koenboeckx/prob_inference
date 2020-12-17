@@ -116,16 +116,20 @@ def generate_dynamics(filename='game_dynamics.pkl', n_steps=1000000):
 def load_dynamics(filename='game_dynamics.pkl'):
     with open(filename, 'rb') as f:
         d = pickle.load(f)
-    return d['transition'], d['rewards']
+    return d['transition'], d['rewards'], d['counts']
 
 if __name__ == '__main__':
     filename = 'game_dynamics3.pkl'
     #transition_table, rewards, counts = generate_dynamics(filename=filename, n_steps=10000000)
-    transition_table, rewards = load_dynamics(filename=filename)
+    transition_table, rewards, counts = load_dynamics(filename=filename)
     for state in range(21):
         n = 0
         for action in range(5):
             #print(state, action, transition_table[(state, action)])
             n += sum(transition_table[(state, action)])
-        print(f'{state}: {n}')    
+        print(f'{state}: {n}')
+    #for key in rewards:
+    #    print(f'{key}: reward = {rewards[key]}')
+
+
     #test_env()
