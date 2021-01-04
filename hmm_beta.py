@@ -117,9 +117,10 @@ transition_table = {
     (20, 4): [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
 }
 
-rewards = {} # !! TODO: reward <= 0 !!
+goal_reward = 10
+rewards = {}
 for (s, a) in states_actions:
-    rewards[(s, a)] = -0.1 - 5
+    rewards[(s, a)] = -0.1 - goal_reward
 rewards[(13, 2)] = 0
 action_prior = [1/n_actions,] * n_actions # uniform prior
 
@@ -158,10 +159,12 @@ def compute_optimal_policy(beta_sa, beta_s):
             policy[t][state] = [None,] * n_actions
             for idx, action in enumerate(actions):
                 policy[t][state][idx] = beta_sa[t][(state, action)] / beta_s[t][state]
+                policy[t][state][idx] *= action_prior[idx] # normalizes !
     return policy
 
 if __name__ == '__main__':
-    horizon = 8
+    # Set initial state: p(s=0) = 1
+    horizon = 9
     beta_sa, beta_s = compute_messages(T=horizon)
     policy = compute_optimal_policy(beta_sa, beta_s)
     done = False
