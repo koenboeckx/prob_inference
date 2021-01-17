@@ -1,3 +1,4 @@
+import copy
 from matplotlib import pyplot as plt
 
 import gym
@@ -20,3 +21,12 @@ print(obs.shape)
 
 plt.imshow(env.current_grid_map)
 plt.show()
+
+def remove_self(grid_map):
+    gm = copy.deepcopy(grid_map)
+    gm[gm == 4] = 0
+    return gm
+
+def pos_estimate(obs, grid_map):
+    o, gm = remove_self(obs), remove_self(grid_map)
+
